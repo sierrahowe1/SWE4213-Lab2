@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # API Gateway - PROVIDED COMPLETE
+  # ============================================
+  gateway:
+    build: ./gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+    networks:
+      - app-network
+
+  # ============================================
+  # User Service + Database - PROVIDED COMPLETE
+  # Use this as a reference for the services you build!
+  # ============================================
+  user-service:
+    build: ./user-service
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: user-db
+      DB_PORT: 5432
+      DB_NAME: userdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - user-db
+    networks:
+      - app-network
+
+  user-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - user-data:/var/lib/postgresql/data
+      - ./user-service/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
+  # ============================================
+  # TODO: Add Product Service + Database
+  # ============================================
+  # HINT: Follow the same pattern as user-service and user-db above
+  # Product Service should:
+  #   - Build from ./product-service
+  #   - Expose port 3002
+  #   - Connect to product-db with database name "productdb"
+  #   - Depend on product-db
+  #   - Be on app-network
+  #
+  # Product Database should:
+  #   - Use postgres:15-alpine image
+  #   - Create database "productdb"
+  #   - Mount product-service/init.sql
+  #   - Use a named volume "product-data"
+  #   - Be on app-network
+
+  # YOUR CODE HERE
+
+  # ============================================
+  # TODO: Add Order Service + Database
+  # ============================================
+  # HINT: Same pattern again, but the Order Service depends on
+  #       BOTH order-db AND user-service AND product-service
+  #       (because it calls them to validate users and products)
+  #
+  # Order Service should:
+  #   - Build from ./order-service
+  #   - Expose port 3003
+  #   - Connect to order-db with database name "orderdb"
+  #   - Depend on order-db, user-service, and product-service
+  #   - Be on app-network
+  #
+  # Order Database should:
+  #   - Use postgres:15-alpine image
+  #   - Create database "orderdb"
+  #   - Mount order-service/init.sql
+  #   - Use a named volume "order-data"
+  #   - Be on app-network
+
+  # YOUR CODE HERE
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  user-data:
+  # TODO: Add volumes for product-data and order-data
