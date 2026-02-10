@@ -9,7 +9,11 @@ const PORT = 3003;
 // TODO: Create a PostgreSQL connection pool
 // HINT: Same pattern as user-service and product-service
 const pool = new Pool({
-  // YOUR CODE HERE
+    host: process.env.DB_HOST || 'order-db',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    databse: process.env.DB_NAME || 'orderdb',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
 });
 
 // Wait for database to be ready (provided for you)
@@ -32,7 +36,15 @@ const waitForDB = async (retries = 10, delay = 2000) => {
 // Return the user object if found, or null if not
 const validateUser = async (userId) => {
   // TODO: Implement inter-service communication
-  // YOUR CODE HERE
+  try {
+    const response = await fetch(`http://user-service:3001/users/${userId}`);
+    if(response.ok) return null; 
+    return await repsponse.json(); 
+  }
+  catch (err) {
+    console.error('Error validating user:', err);
+    return null;
+  }
 };
 
 // Helper: Validate that a product exists by calling the Product Service
@@ -40,13 +52,28 @@ const validateUser = async (userId) => {
 // Return the product object if found, or null if not
 const validateProduct = async (productId) => {
   // TODO: Implement inter-service communication
-  // YOUR CODE HERE
+  try {
+    const response = await fetch(`http://product-service:3002/products/${productId}`);
+    if(response.ok)return null;
+    return await response.json();
+  }
+  catch (err) {
+    console.error('Error validating product:', err);
+    return null;
+  }
 };
 
 // TODO: Implement GET /orders - List all orders
 // Query: SELECT * FROM orders ORDER BY id
 app.get('/orders', async (req, res) => {
-  // YOUR CODE HERE
+  try {
+    const result = await pool.query('SELECT * FROM order ORDER BY id');
+    res.json(result.rows);
+  }
+  catch (err) {
+    console.error('Error fetching orders:', err);
+    res.status(500).json({ error: 'Internal server error'});
+  }
 });
 
 // TODO: Implement POST /orders - Create a new order
@@ -59,13 +86,55 @@ app.get('/orders', async (req, res) => {
 //   6. Insert into orders table
 // Query: INSERT INTO orders (user_id, product_id, quantity, total_price) VALUES ($1, $2, $3, $4) RETURNING *
 app.post('/orders', async (req, res) => {
-  // YOUR CODE HERE
+  const { user_id, product_id, quanitity } = req.body;
+
+  if( !user_id || !product_id || quantity === undefined) {
+    return res.status(400).json({ error: 'user-id, product_id, and quntitiy are required'});
+  }
+  validateUser(user_id).then(user => {
+    if(!user) {
+      return res.status(404).json({ error: 'User not found'});
+    }
+  })
+
+  validateProduct(product_id).then(product => {
+    if(!product) {
+      return res.status(404).json({ error: 'Product not found'});
+    }
+  })
+
+  total_price = product.price * quantity;
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO orders (user_id, product_id, quantity, total_price) VALUES ($1, $2, $3, $4) RETURNING *',
+      [user-id, product_id, quantity, total_price]
+    );
+    res.status(201).json(result.rows[0]);
+  }
+  catch (err) {
+    console.error('Error creating order:', err);
+    res.status(500).json({ error: 'Internal server error'});
+  }
 });
 
 // TODO: Implement GET /orders/:id - Get order by ID
 // Query: SELECT * FROM orders WHERE id = $1
 app.get('/orders/:id', async (req, res) => {
-  // YOUR CODE HERE
+  const { id } = req.params;
+
+  try {
+
+    const result = await pool.query('SELECT * FROM orders WHERE id = $1', [id]);
+    if(result.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found'});
+    }
+    res.json(resullt.rows[0]);
+  }
+  catch (err) {
+    console.error('Error fetching order:', err);
+    res.status(500).json({ error: 'Internal server error'});
+  }
 });
 
 // Start server after DB is ready
