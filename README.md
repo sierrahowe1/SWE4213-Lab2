@@ -88,11 +88,47 @@ Key things to note:
 
 2. **Wait for database** -- the `waitForDB` function retries the connection because the database container may take a few seconds to start.
 
-3. **Three REST endpoints**: `GET /users`, `POST /users`, `GET /users/:id`
+3. **Database initialization** -- the `initDB` function creates the database table on startup using `CREATE TABLE IF NOT EXISTS`, and inserts seed data if the table is empty. This is critical because when the images run from a Docker registry there are no `init.sql` files to mount into the database container. Each service must create its own tables in code:
+   ```javascript
+   const initDB = async () => {
+     await pool.query(`
+       CREATE TABLE IF NOT EXISTS users (
+         id SERIAL PRIMARY KEY,
+         name VARCHAR(100) NOT NULL,
+         email VARCHAR(100) UNIQUE NOT NULL,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+       )
+     `);
+     const { rowCount } = await pool.query('SELECT 1 FROM users LIMIT 1');
+     if (rowCount === 0) {
+       await pool.query(`
+         INSERT INTO users (name, email) VALUES
+           ('Alice Johnson', 'alice@example.com'),
+           ('Bob Smith', 'bob@example.com')
+       `);
+     }
+   };
+   ```
 
-### 1.3 The Database Init Script (`user-service/init.sql`)
+4. **Startup chain** -- the server starts only after both the database connection and schema initialization succeed:
+   ```javascript
+   waitForDB().then(async () => {
+     await initDB();
+     app.listen(PORT, () => {
+       console.log(`User Service running on port ${PORT}`);
+     });
+   });
+   ```
 
-PostgreSQL runs any `.sql` files placed in `/docker-entrypoint-initdb.d/` when the container starts for the first time. This creates the table and inserts seed data.
+5. **Three REST endpoints**: `GET /users`, `POST /users`, `GET /users/:id`
+
+### 1.3 Database Initialization (`init.sql` vs `initDB`)
+
+The `init.sql` files define the table schemas and seed data for each service. During local development the `docker-compose.yml` mounts these files into the PostgreSQL containers via bind mounts (e.g., `./user-service/init.sql:/docker-entrypoint-initdb.d/init.sql`), and PostgreSQL executes them on first startup.
+
+**However, this does not work when images are pulled from a Docker registry.** The grading compose file has no `build` step and no bind mounts -- the database containers start completely empty. If your service relies only on `init.sql`, the tables will never be created and your service will crash.
+
+This is why each service must also include an `initDB` function that creates the tables in application code. The `init.sql` files remain useful as a reference for the schemas, but the `initDB` function is what makes your images portable and self-contained. Use `CREATE TABLE IF NOT EXISTS` so it is safe to run every time the service starts.
 
 ---
 
@@ -180,6 +216,24 @@ Query: SELECT * FROM products WHERE id = $1
 
 Remember to return 404 if the product is not found.
 
+### 4.5 Database Initialization (`initDB`)
+
+Add an `initDB` function that creates the `products` table and seeds it with data. Follow the same pattern as the user service, using the schema from `product-service/init.sql`:
+
+```sql
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+Also insert seed data if the table is empty (check with `SELECT 1 FROM products LIMIT 1`). Use the seed data from `init.sql`.
+
+Update the startup chain so that `initDB` runs after `waitForDB` and before `app.listen`.
+
 ---
 
 ## Part 5: Build the Order Service
@@ -225,6 +279,25 @@ This is the most complex endpoint. Steps:
 4. Call `validateProduct(product_id)` -- return 404 with message `"Product not found"` if null
 5. Calculate `total_price = product.price * quantity`
 6. Insert into the database and return the created order with status 201
+
+### 5.5 Database Initialization (`initDB`)
+
+Add an `initDB` function that creates the `orders` table. Follow the same pattern as the user service, using the schema from `order-service/init.sql`:
+
+```sql
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    total_price DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+The orders table has no seed data, so you only need the `CREATE TABLE` query.
+
+Update the startup chain so that `initDB` runs after `waitForDB` and before `app.listen`.
 
 ---
 
@@ -520,6 +593,32 @@ volumes:
   order-data:
 ```
 
+Notice there are **no `build` fields and no init.sql mounts** -- I only have your images. This means:
+
+- Your database tables **must** be created by the application code (the `initDB` function), not only by `init.sql`.
+- Everything must work with just `docker compose up`.
+
 Make sure to test this yourself before submitting: save the compose file above, replace the image names with yours, and run `docker compose up` in an empty directory.
+
+---
+
+## Submission
+
+Submit the following on **D2L**:
+
+1. A link to your GitHub repository.
+2. Your Docker Hub username.
+
+Your repository must include:
+
+1. **All source code** -- the complete project with gateway, user-service, product-service, and order-service (including `index.js`, `Dockerfile`, `package.json`, and `init.sql` for each service).
+2. **`docker-compose.yml`** -- the fully completed compose file.
+3. **Bruno test collection** -- the Bruno tests from Part 12, committed to the repository so I can open and run them.
+4. **Published Docker images** -- your images must be pushed to Docker Hub as described in Part 13.
+
+I will grade your lab by:
+1. Pulling your Docker images from the registry and running them with the grading compose file (no source code, no build step).
+2. Verifying that all services start, connect to their databases, and create their own tables automatically.
+3. Running your Bruno test collection against the running services.
 
 ---
