@@ -109,6 +109,9 @@ app.get('/products/:id', async (req, res) => {
 
 // Start server after DB is ready
 waitForDB().then(() => {
+  return initDB();
+})
+.then(() => {
   app.listen(PORT, () => {
     console.log(`Product Service running on port ${PORT}`);
   });
