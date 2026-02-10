@@ -329,16 +329,88 @@ docker compose ps
 
 ---
 
-## Bonus Challenges
-1. **Add a health check endpoint** (`GET /health`) to each service and configure Docker Compose `healthcheck` so that `depends_on` waits for services to be truly ready
-2. **Add error handling** for when a dependent service is down (e.g., Order Service should return 503 if it can't reach User Service)
-3. Getting people to host this might be a good thing. 
-4. Adding authentication to gateway 
-5. Adding rate limiting to gateway 
-6. Add Bruno tests
+## Part 8: Add Health Checks
+
+Each service should expose a `GET /health` endpoint that returns a `200` status with a JSON body indicating the service is healthy (e.g., `{ "status": "ok" }`). The health check should also verify the database connection is alive.
+
+Once the endpoints are in place, configure Docker Compose `healthcheck` directives for each service. Update `depends_on` to use `condition: service_healthy` so that dependent services wait for their dependencies to be truly ready, not just started.
+
+Example `healthcheck` in `docker-compose.yml`:
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+```
 
 ---
 
-## Submission
+## Part 9: Add Error Handling for Dependent Services
 
-TODO --> Update this 
+The Order Service depends on both the User Service and the Product Service. If either of those services is unreachable, the Order Service should handle the failure gracefully instead of crashing or hanging.
+
+- When the Order Service cannot reach the User Service or Product Service, return a `503 Service Unavailable` response with a descriptive error message (e.g., `"User Service is unavailable"`).
+- Distinguish between a `404` (resource not found) and a `503` (service unreachable) so the client knows what went wrong.
+
+---
+
+## Part 10: Add Authentication to the Gateway
+
+Add a simple authentication layer to the API Gateway. Use a token-based approach:
+
+- Requests must include an `Authorization` header with a valid token.
+- The gateway should validate the token before proxying the request to downstream services.
+- Return `401 Unauthorized` if the token is missing or invalid.
+- The `/health` endpoint should remain publicly accessible without authentication.
+
+You may use a hardcoded list of valid tokens or implement JWT validation.
+
+---
+
+## Part 11: Add Rate Limiting to the Gateway
+
+Add rate limiting middleware to the API Gateway to prevent abuse:
+
+- Limit each client (by IP address) to a reasonable number of requests per time window (e.g., 100 requests per 15 minutes).
+- Return `429 Too Many Requests` when the limit is exceeded, with a `Retry-After` header indicating when the client can try again.
+- Consider using the `express-rate-limit` package.
+
+---
+
+## Part 12: Add Bruno Tests
+
+Create a [Bruno](https://www.usebruno.com/) test collection that covers the full API:
+
+- Test all CRUD endpoints for Users, Products, and Orders through the gateway.
+- Include tests for error cases (missing fields, invalid IDs, non-existent resources).
+- Include tests for the validation logic in the Order Service (invalid user, invalid product).
+- The test collection should be committed to the repository so others can run it.
+
+---
+
+## Part 13: Publish Docker Images to a Registry
+
+Push your service images to a Docker registry (e.g., Docker Hub or GitHub Container Registry):
+
+1. Tag each image with a meaningful version (e.g., `v1.0`).
+2. Push the images to the registry.
+3. Update `docker-compose.yml` to include an `image` field alongside `build` so that the images can be pulled without building locally.
+
+```bash
+docker tag user-service:latest <your-registry>/user-service:v1.0
+docker push <your-registry>/user-service:v1.0
+```
+
+---
+
+## Part 14: Single Command Setup
+
+The entire lab environment should be runnable with a single command. Ensure that:
+
+- `docker compose up --build` starts everything from scratch with no manual steps.
+- All databases are initialized automatically via init scripts.
+- All services wait for their dependencies before accepting traffic (using the health checks from Part 8).
+- Document the single command in a clear place so anyone cloning the repo can get started immediately.
+
+---
