@@ -34,6 +34,25 @@ const waitForDB = async (retries = 10, delay = 2000) => {
   throw new Error('Could not connect to database');
 };
 
+const initDB = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      description TEXT,
+      price DECIMAL(10, 2) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  const { rowCount } = await pool.query(`SELECT 1 FROM products LIMIT 1`);
+  if (rowCount === 0) {
+    await pool.query(`
+    INSERT INTO products (name, description, price) VALUES
+    ('Laptop', 'A powerful laptop for developers', 999.99),
+    ('Headphones', 'Noise-cancelling wireless headphones', 199.99)`);
+  }
+};
+
 // TODO: Implement GET /products - List all products
 // HINT: Look at the GET /users endpoint in user-service/index.js
 // Query: SELECT * FROM products ORDER BY id
