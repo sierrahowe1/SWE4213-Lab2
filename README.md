@@ -520,11 +520,6 @@ volumes:
   order-data:
 ```
 
-Notice there are **no `build` fields and no init.sql mounts** — the TA only has your images. This means:
-
-- Your database tables **must** be created by the application code (e.g., in the `waitForDB` / startup logic), not only by `init.sql`.
-- Everything must work with just `docker compose up`.
-
 Make sure to test this yourself before submitting: save the compose file above, replace the image names with yours, and run `docker compose up` in an empty directory.
 
 ---
