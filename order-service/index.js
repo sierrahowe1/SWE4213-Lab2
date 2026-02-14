@@ -105,6 +105,18 @@ app.post('/orders', async (req, res) => {
 
   total_price = product.price * quantity;
 
+  const initDB = async () => {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        total_price DECIMAL(10, 2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+  }
+
   try {
     const result = await pool.query(
       'INSERT INTO orders (user_id, product_id, quantity, total_price) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -139,6 +151,9 @@ app.get('/orders/:id', async (req, res) => {
 
 // Start server after DB is ready
 waitForDB().then(() => {
+  return initDB();
+})
+.then(() => {
   app.listen(PORT, () => {
     console.log(`Order Service running on port ${PORT}`);
   });

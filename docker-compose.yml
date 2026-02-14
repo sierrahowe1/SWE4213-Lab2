@@ -44,48 +44,65 @@ services:
     networks:
       - app-network
 
-  # ============================================
-  # TODO: Add Product Service + Database
-  # ============================================
-  # HINT: Follow the same pattern as user-service and user-db above
-  # Product Service should:
-  #   - Build from ./product-service
-  #   - Expose port 3002
-  #   - Connect to product-db with database name "productdb"
-  #   - Depend on product-db
-  #   - Be on app-network
-  #
-  # Product Database should:
-  #   - Use postgres:15-alpine image
-  #   - Create database "productdb"
-  #   - Mount product-service/init.sql
-  #   - Use a named volume "product-data"
-  #   - Be on app-network
 
-  # YOUR CODE HERE
+product-service:
+  build: ./product-service
+  ports:
+    - "3002:3002"
+  environment:
+    DB_HOST: product-db
+    DB_PORT: 5432
+    DB_NAME: productdb
+    DB_USER: postgres
+    DB_PASSWORD: postgres
+  depends_on:
+    - product-db
+  networks:
+    - app-network
+  
+product-db:
+  image: postgres:15-alpine
+  environment:
+    POSTGRES_DB: productdb
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+  volumes:
+    - product-data:/var/lib/postgresql/data
+    - ./product-service/init.sql:/docker-entrypoint-initdb.d/init.sql
+  networks:
+    - app-network
+ 
 
-  # ============================================
-  # TODO: Add Order Service + Database
-  # ============================================
-  # HINT: Same pattern again, but the Order Service depends on
-  #       BOTH order-db AND user-service AND product-service
-  #       (because it calls them to validate users and products)
-  #
-  # Order Service should:
-  #   - Build from ./order-service
-  #   - Expose port 3003
-  #   - Connect to order-db with database name "orderdb"
-  #   - Depend on order-db, user-service, and product-service
-  #   - Be on app-network
-  #
-  # Order Database should:
-  #   - Use postgres:15-alpine image
-  #   - Create database "orderdb"
-  #   - Mount order-service/init.sql
-  #   - Use a named volume "order-data"
-  #   - Be on app-network
 
-  # YOUR CODE HERE
+order-service:
+  build: ./order-service
+  ports:
+    - "3003:3003"
+  environment:
+    DB_HOST: order-db
+    DB_PORT: 5432
+    DB_NAME: orderdb
+    DB_USER: postgres
+    DB_PASSWORD: postgres
+  depends_on:
+    - order-db
+    - user-service
+    - product-service
+  networks:
+    - app-network
+
+order-db:
+  image: postgres:15-alpine
+  environment:
+    POSTGRES_DB: orderdb
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+  volumes:
+    - order-data:/var/lib/postgresql/data
+    - ./order-service/init.sql:/docker-entrypoint-initdb.d/init.sql
+  networks:
+    - app-network
+
 
 networks:
   app-network:
@@ -94,3 +111,5 @@ networks:
 volumes:
   user-data:
   # TODO: Add volumes for product-data and order-data
+  product-data:
+  order-data:
