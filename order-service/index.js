@@ -92,6 +92,17 @@ app.get('/orders', async (req, res) => {
   }
 });
 
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json("Order Service is healthy");
+  }
+  catch (err) {
+    console.error('Health check failed:', err);
+    res.status(500).json({ error: 'Order Service is unhealthy'});
+  }
+});
+
 
 app.post('/orders', async (req, res) => {
   const { user_id, product_id, quantity } = req.body;

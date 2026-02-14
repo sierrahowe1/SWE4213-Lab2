@@ -89,6 +89,17 @@ app.post('/products', async (req, res) => {
   }
 });
 
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json("Order Service is healthy");
+  }
+  catch (err) {
+    console.error('Health check failed:', err);
+    res.status(500).json({ error: 'Order Service is unhealthy'});
+  }
+});
+
 // TODO: Implement GET /products/:id - Get product by ID
 // HINT: Look at the GET /users/:id endpoint in user-service/index.js
 // Query: SELECT * FROM products WHERE id = $1

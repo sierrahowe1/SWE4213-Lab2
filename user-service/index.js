@@ -77,6 +77,17 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json("Order Service is healthy");
+  }
+  catch (err) {
+    console.error('Health check failed:', err);
+    res.status(500).json({ error: 'Order Service is unhealthy'});
+  }
+});
+
 // Start server after DB is ready
 waitForDB().then(() => {
   app.listen(PORT, () => {
