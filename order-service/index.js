@@ -11,7 +11,7 @@ const PORT = 3003;
 const pool = new Pool({
     host: process.env.DB_HOST || 'order-db',
     port: parseInt(process.env.DB_PORT || '5432'),
-    databse: process.env.DB_NAME || 'orderdb',
+    database: process.env.DB_NAME || 'orderdb',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
 });
@@ -31,6 +31,18 @@ const waitForDB = async (retries = 10, delay = 2000) => {
   throw new Error('Could not connect to database');
 };
 
+const initDB = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      total_price DECIMAL(10, 2) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+}
+
 // Helper: Validate that a user exists by calling the User Service
 // HINT: Use fetch() to call http://user-service:3001/users/:id
 // Return the user object if found, or null if not
@@ -38,8 +50,10 @@ const validateUser = async (userId) => {
   // TODO: Implement inter-service communication
   try {
     const response = await fetch(`http://user-service:3001/users/${userId}`);
-    if(response.ok) return null; 
-    return await repsponse.json(); 
+    if(!response.ok) {
+      return null;
+    }
+    return await response.json();
   }
   catch (err) {
     console.error('Error validating user:', err);
@@ -54,7 +68,9 @@ const validateProduct = async (productId) => {
   // TODO: Implement inter-service communication
   try {
     const response = await fetch(`http://product-service:3002/products/${productId}`);
-    if(response.ok)return null;
+    if(!response.ok) {
+      return null;
+    }
     return await response.json();
   }
   catch (err) {
@@ -67,7 +83,7 @@ const validateProduct = async (productId) => {
 // Query: SELECT * FROM orders ORDER BY id
 app.get('/orders', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM order ORDER BY id');
+    const result = await pool.query('SELECT * FROM orders ORDER BY id');
     res.json(result.rows);
   }
   catch (err) {
@@ -76,51 +92,32 @@ app.get('/orders', async (req, res) => {
   }
 });
 
-// TODO: Implement POST /orders - Create a new order
-// This is the most complex endpoint! Steps:
-//   1. Extract user_id, product_id, quantity from req.body
-//   2. Validate all fields are present
-//   3. Call validateUser(user_id) - return 404 if user not found
-//   4. Call validateProduct(product_id) - return 404 if product not found
-//   5. Calculate total_price = product.price * quantity
-//   6. Insert into orders table
-// Query: INSERT INTO orders (user_id, product_id, quantity, total_price) VALUES ($1, $2, $3, $4) RETURNING *
+
 app.post('/orders', async (req, res) => {
-  const { user_id, product_id, quanitity } = req.body;
+  const { user_id, product_id, quantity } = req.body;
 
   if( !user_id || !product_id || quantity === undefined) {
-    return res.status(400).json({ error: 'user-id, product_id, and quntitiy are required'});
+    return res.status(400).json({ error: 'user-id, product_id, and quantity are required'});
   }
-  validateUser(user_id).then(user => {
+  const user = await validateUser(user_id);
     if(!user) {
       return res.status(404).json({ error: 'User not found'});
     }
-  })
+  
 
-  validateProduct(product_id).then(product => {
+  const product = await validateProduct(product_id);
     if(!product) {
       return res.status(404).json({ error: 'Product not found'});
     }
-  })
+  
 
-  total_price = product.price * quantity;
+  const total_price = product.price * quantity;
 
-  const initDB = async () => {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS orders (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER NOT NULL DEFAULT 1,
-        total_price DECIMAL(10, 2) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )`);
-  }
 
   try {
     const result = await pool.query(
       'INSERT INTO orders (user_id, product_id, quantity, total_price) VALUES ($1, $2, $3, $4) RETURNING *',
-      [user-id, product_id, quantity, total_price]
+      [user_id, product_id, quantity, total_price]
     );
     res.status(201).json(result.rows[0]);
   }
@@ -141,7 +138,7 @@ app.get('/orders/:id', async (req, res) => {
     if(result.rows.length === 0) {
       return res.status(404).json({ error: 'Order not found'});
     }
-    res.json(resullt.rows[0]);
+    res.json(result.rows[0]);
   }
   catch (err) {
     console.error('Error fetching order:', err);
