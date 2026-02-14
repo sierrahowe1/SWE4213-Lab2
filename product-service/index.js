@@ -11,7 +11,7 @@ const PORT = 3002;
 // You need to use the environment variables: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 // The defaults should match what you configure in docker-compose.yml
 const pool = new Pool({
-  host: ProcessingInstruction.env.DB_HOST || 'product-db',
+  host: process.env.DB_HOST || 'product-db',
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'productdb',
   user: process.env.DB_USER || 'postgres',
