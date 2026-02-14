@@ -56,8 +56,7 @@ const validateUser = async (userId) => {
     return await response.json();
   }
   catch (err) {
-    console.error('Error validating user:', err);
-    return null;
+    throw new Error('Service not available');
   }
 };
 
@@ -74,8 +73,7 @@ const validateProduct = async (productId) => {
     return await response.json();
   }
   catch (err) {
-    console.error('Error validating product:', err);
-    return null;
+    throw new Error('Service not available');
   }
 };
 
@@ -99,7 +97,7 @@ app.get('/health', async (req, res) => {
   }
   catch (err) {
     console.error('Health check failed:', err);
-    res.status(500).json({ error: 'Order Service is unhealthy'});
+    res.status(500).json({ error: 'Order Service is unhealthy'})
   }
 });
 
@@ -110,16 +108,30 @@ app.post('/orders', async (req, res) => {
   if( !user_id || !product_id || quantity === undefined) {
     return res.status(400).json({ error: 'user-id, product_id, and quantity are required'});
   }
-  const user = await validateUser(user_id);
+    let user;
+    
+    try {
+      user = await validateUser(user_id);
+    }
+    catch (err) {
+      return res.status(503).json({error: 'User service unavailable'});
+    }
     if(!user) {
       return res.status(404).json({ error: 'User not found'});
     }
   
 
-  const product = await validateProduct(product_id);
+    let product;
+    try {
+      product = await validateProduct(product_id);
+    }
+    catch (err) {
+      return res.status(503).json({error: 'Product service unavailable'});
+    }
     if(!product) {
       return res.status(404).json({ error: 'Product not found'});
     }
+
   
 
   const total_price = product.price * quantity;
