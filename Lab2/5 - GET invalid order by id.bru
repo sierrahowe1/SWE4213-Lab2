@@ -1,0 +1,15 @@
+meta {
+  name: 5 - GET invalid order by id
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://localhost:3003/orders/999
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,0 +1,20 @@
+meta {
+  name: 1-GET orders
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://localhost:3003/orders
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
