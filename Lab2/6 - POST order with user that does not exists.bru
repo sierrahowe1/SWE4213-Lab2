@@ -1,0 +1,15 @@
+meta {
+  name: 6 - POST order with user that does not exists
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://localhost:3003/orders
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}
