@@ -27,9 +27,14 @@ services:
       DB_NAME: userdb
       DB_USER: postgres
       DB_PASSWORD: postgres
-    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
-      - user-db
+      user-db:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -39,7 +44,11 @@ services:
       POSTGRES_DB: userdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - user-data:/var/lib/postgresql/data
       - ./user-service/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -56,9 +65,14 @@ services:
       DB_NAME: productdb
       DB_USER: postgres
       DB_PASSWORD: postgres
-    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
-      - product-db
+      product-db:
+        condition: service_healthy
     networks:
       - app-network
   
@@ -68,7 +82,11 @@ services:
       POSTGRES_DB: productdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - product-data:/var/lib/postgresql/data
       - ./product-service/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -85,12 +103,18 @@ services:
       DB_NAME: orderdb
       DB_USER: postgres
       DB_PASSWORD: postgres
-    
-      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
-      - order-db
-      - user-service
-      - product-service
+      order-db:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
 
     networks:
       - app-network
@@ -101,6 +125,11 @@ services:
       POSTGRES_DB: orderdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - order-data:/var/lib/postgresql/data
       - ./order-service/init.sql:/docker-entrypoint-initdb.d/init.sql

@@ -1,37 +1,63 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = 3000;
 
 const AUTH_TOKEN = 'sample-token';
 
+
 const authCheckHealth = (req, res, next) => {
   if (req.path === '/health') {
     return next();
   }
 
+ 
+  const authHeader = req.headers['authorization'];
 
-const authHeaderCheck = req.headers['authorization'];
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Unauthorized - No token provided'});
+  }
 
-if (!authHeaderCheck || authHeaderCheck !== `Bearer ${AUTH_TOKEN}`) {
-  return res.status(401).json({ error: 'Unauthorized'});
-}
+  const token = authHeader.split(' ')[1];
 
-const token = authHeaderCheck.split(' ')[1];
+  if(token !== AUTH_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized - Invalid token'});
+  }
 
-if(token !== AUTH_TOKEN) {
-  return res.status(401).json({ error: 'Invalid token'});
-}
-
-next();
-
+  next();
 };
+
 
 app.use(authCheckHealth);
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: {
+    error: 'Too many requests, please try again later.',
+    message: 'You have exceeded the rate limit of 100 requests per 15 minutes.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress;
+  },
+  handler: (req, res) => {
+    res.status(429).json({
+      error: 'Too many requests, please try again later.',
+      message: 'You have exceeded the request limit.',
+      retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)
+    });
+  }
+});
 
-// Proxy routes to microservices
+
+app.use(apiLimiter);
+
+
 app.use('/api/users', createProxyMiddleware({
   target: 'http://user-service:3001',
   changeOrigin: true,
@@ -50,7 +76,7 @@ app.use('/api/orders', createProxyMiddleware({
   pathRewrite: { '^/api/orders': '/orders' },
 }));
 
-// Health check
+
 app.get('/health', (req, res) => {
   res.json({ status: 'Gateway is running' });
 });
