@@ -1,15 +1,20 @@
 meta {
-  name: 7 - POST order with product that does not exist
+  name: 1-GET orders
   type: http
-  seq: 7
+  seq: 4
 }
 
-post {
+get {
   url: http://localhost:3003/orders
   body: none
   auth: inherit
 }
 
+assert {
+  res.status: eq 200
+}
+
 settings {
   encodeUrl: true
+  timeout: 0
 }

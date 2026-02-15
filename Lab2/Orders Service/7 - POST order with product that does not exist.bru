@@ -1,7 +1,7 @@
 meta {
-  name: 3 - POST orders
+  name: 7 - POST order with product that does not exist
   type: http
-  seq: 3
+  seq: 4
 }
 
 post {
@@ -12,14 +12,10 @@ post {
 
 body:json {
   {
-    "user-id": 1,        
-    "product_id": 1,
+    "user_id": 1,        
+    "product_id": 999,
     "quantity": 2
   }
-}
-
-assert {
-  res.status: eq 200
 }
 
 settings {

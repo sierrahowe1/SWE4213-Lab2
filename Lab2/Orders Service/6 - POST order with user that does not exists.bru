@@ -1,15 +1,24 @@
 meta {
   name: 6 - POST order with user that does not exists
   type: http
-  seq: 6
+  seq: 2
 }
 
 post {
   url: http://localhost:3003/orders
-  body: none
+  body: json
   auth: inherit
+}
+
+body:json {
+  {
+    "user_id": 999,        
+    "product_id": 1,
+    "quantity": 2
+  }
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }
