@@ -1,0 +1,27 @@
+meta {
+  name: 14 - POST users
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:3001/users
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Sierra",
+    "email": "sample@unb.ca"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

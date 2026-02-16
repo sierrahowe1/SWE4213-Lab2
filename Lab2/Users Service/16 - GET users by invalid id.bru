@@ -1,0 +1,20 @@
+meta {
+  name: 16 - GET users by invalid id
+  type: http
+  seq: 4
+}
+
+get {
+  url: http://localhost:3001/users/999
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 404
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

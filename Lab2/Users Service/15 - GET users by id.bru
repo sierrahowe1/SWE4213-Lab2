@@ -1,0 +1,20 @@
+meta {
+  name: 15 - GET users by id
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://localhost:3001/users/1
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
