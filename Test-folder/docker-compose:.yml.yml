@@ -1,0 +1,100 @@
+services:
+  gateway:
+    image: sierrahowe1/gateway:v1.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+    networks:
+      - app-network
+
+  user-service:
+    image: sierrahowe1/user-service:v1.0
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: user-db
+      DB_PORT: 5432
+      DB_NAME: userdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - user-db
+    networks:
+      - app-network
+
+  user-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - user-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  product-service:
+    image: sierrahowe1/product-service:v1.0
+    ports:
+      - "3002:3002"
+    environment:
+      DB_HOST: product-db
+      DB_PORT: 5432
+      DB_NAME: productdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - product-db
+    networks:
+      - app-network
+
+  product-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - product-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  order-service:
+    image: sierrahowe1/order-service:v1.0
+    ports:
+      - "3003:3003"
+    environment:
+      DB_HOST: order-db
+      DB_PORT: 5432
+      DB_NAME: orderdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - order-db
+      - user-service
+      - product-service
+    networks:
+      - app-network
+
+  order-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - order-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  user-data:
+  product-data:
+  order-data:
