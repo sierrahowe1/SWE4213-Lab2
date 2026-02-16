@@ -1,0 +1,28 @@
+meta {
+  name: POST products with missing field
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://localhost:3002/products
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    
+    "description": "stress ball",
+    "price": 9.99
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
